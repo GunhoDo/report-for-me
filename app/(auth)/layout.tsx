@@ -3,9 +3,6 @@ export default function AuthLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-muted/30">
-      {children}
-    </div>
-  );
+  // tmp-v0 화면이 자체적으로 full-screen 레이아웃을 구성하므로 감싸지 않음
+  return children;
 }

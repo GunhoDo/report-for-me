@@ -1,0 +1,33 @@
+---
+alwaysApply: true
+---
+# Project Context: User-Configured Automated Intelligence
+
+## 1. Core Value Proposition
+- **Identity:** A SaaS that generates dynamic reports based on user configuration (Keywords + Viewpoint) without requiring user prompting.
+- **Key Philosophy:** "Zero Prompting" for the end-user. The UI abstracts all prompt engineering.
+- **Target Audience:** Professional investors, senior developers, strategists (Time-poor, information-heavy).
+
+## 2. Strict Business Logic (from PRD)
+- **Configuration-Driven:** Users only defined `Keywords` and `Viewpoint` (e.g., "Critical", "Optimistic"). Never expose raw prompts to users.
+- **Graceful Degradation:** If 1 out of 5 sources fails to crawl, the report MUST still be generated with the remaining 4. Do not fail the whole task. Mark the failed source as `Status: Failed`.
+- **Strict Output Format:** The Executive Summary must be **3 bullet points or less**. Use a self-correction loop if the LLM produces more.
+- **Async Delivery:** Reports are generated in the background. The frontend must handle long-polling or WebSocket updates with specific status messages (e.g., "Crawling...", "Analyzing...", "Synthesizing...").
+
+## 3. Data Flow (from FLOW.md)
+1.  **Client:** Next.js + Shadcn UI -> Config Modal -> Save Config.
+2.  **Trigger:** Celery Beat -> Redis -> Celery Worker.
+3.  **Execution:** Worker -> Tavily API (Crawl) -> OpenAI (Map-Reduce Analysis) -> PostgreSQL (Save).
+4.  **Feedback:** User Feedback -> Pinecone (Vector DB) -> Future Prompt Refinement.
+
+## 4. Operational Constraints
+- **Retry Logic:** Max 3 retries with exponential backoff for API calls.
+- **Circuit Breaker:** Skip sources that timeout (>10s).
+- **Sanitization:** All user inputs (Keywords) must be sanitized before insertion into System Prompts to prevent injection attacks.
+
+## 5. tmp-v0 폴더에 대한 규칙
+- `tmp-v0/` 디렉토리는 **v0 디자인/코드 백업용 스냅샷**이다.
+- 이 폴더 안의 파일은 **빌드, 타입체크, 런타임 로직에 절대 직접 참조하지 않는다.**
+  - 이미 `tsconfig.json`의 `exclude`에 포함되어 있어 TypeScript 컴파일 대상에서 제외된다.
+  - 새로운 코드에서 `@/tmp-v0/...` 경로로 import 하지 않는다.
+- v0 UI/로직을 참고할 때는 **필요한 부분만 메인 소스(`components/`, `app/` 등)로 복사·이식**한 뒤, 메인 소스만 사용하는 것을 원칙으로 한다.

@@ -1,7 +1,9 @@
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
 /**
- * className 병합. shadcn 도입 시 clsx + tailwind-merge로 교체 권장.
- * @see docs/tech-stack.md
+ * className 병합 (shadcn 표준).
  */
-export function cn(...inputs: (string | undefined | null | false)[]) {
-  return inputs.filter(Boolean).join(" ");
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
 }
