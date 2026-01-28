@@ -100,7 +100,7 @@
 ```
 app/                 # 라우트 (페이지 단위)
   (auth)/            # 로그인·가입
-  (dashboard)/       # /app, 설정, 히스토리, 리포트 상세
+  dashboard/         # /dashboard, 설정, 히스토리, 리포트 상세
 components/
   ui/                # 공통 UI (도메인 무관)
   domain/            # auth, config, report, source, layout

@@ -25,12 +25,12 @@ export default function LoginPage() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Simulate login
-    router.push("/app");
+    router.push("/dashboard");
   };
 
   const handleGoogleLogin = () => {
     // Simulate Google login
-    router.push("/app");
+    router.push("/dashboard");
   };
 
   return (

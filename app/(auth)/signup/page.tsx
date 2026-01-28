@@ -29,12 +29,12 @@ export default function SignupPage() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate signup -> go to app
-    router.push("/app");
+    // Simulate signup -> go to dashboard
+    router.push("/dashboard");
   };
 
   const handleGoogleLogin = () => {
-    router.push("/app");
+    router.push("/dashboard");
   };
 
   return (
