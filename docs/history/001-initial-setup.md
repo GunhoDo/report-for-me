@@ -21,7 +21,7 @@ title: Initial setup (Next.js App Router + Shadcn UI 기반)
 - **라우팅/화면 골격**
   - 라우팅 그룹 기반 구조
     - `app/(auth)`: 로그인/가입
-    - `app/(dashboard)`: 대시보드(`/app`) 및 하위 화면(history/settings/reports)
+    - `app/dashboard`: 대시보드(`/dashboard`) 및 하위 화면(history/settings/reports)
   - 랜딩 페이지는 `app/page.tsx` 중심으로 구성
 - **도메인 컴포넌트/훅 구조**
   - 도메인 컴포넌트: `components/domain/*` (auth/config/report/source/layout)
@@ -35,7 +35,7 @@ title: Initial setup (Next.js App Router + Shadcn UI 기반)
 
 ## 변경 이유
 
-- **PRD의 “Zero Prompting” 목표를 UI 구조로 선반영**하기 위해, 도메인 컴포넌트 분리(`components/domain/*`)와 대시보드 레이아웃(`app/(dashboard)`)을 먼저 확정했다.
+- **PRD의 “Zero Prompting” 목표를 UI 구조로 선반영**하기 위해, 도메인 컴포넌트 분리(`components/domain/*`)와 대시보드 레이아웃(`app/dashboard`)을 먼저 확정했다.
 - **긴 작업(리포트 생성) UX 요구사항(단계별 메시지/스켈레톤/토스트)**을 빠르게 구현하기 위해 shadcn/ui + Radix UI 기반의 공통 UI 레이어(`components/ui/*`)를 초기에 구성했다.
 - **향후 백엔드/비동기 파이프라인(권장 아키텍처)과의 연결**을 고려해, Supabase 유틸 및 타입/훅 레이어를 초기에 분리해 확장 가능성을 확보했다.
 

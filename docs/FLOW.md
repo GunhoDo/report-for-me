@@ -4,7 +4,7 @@ flowchart TD
         Landing[Landing Page]
         Login[Login Page]
         
-        subgraph Dashboard ["App Dashboard (/app)"]
+        subgraph Dashboard ["App Dashboard (/dashboard)"]
             Sidebar["사이드바 (History/Profile)"]
             MainArea[메인 작업 영역]
             

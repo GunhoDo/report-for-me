@@ -1,6 +1,5 @@
 import { AppDashboard } from "@/components/dashboard/AppDashboard";
 
-export default function AppPage() {
+export default function DashboardPage() {
   return <AppDashboard />;
 }
-
