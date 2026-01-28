@@ -1,0 +1,43 @@
+---
+alwaysApply: true
+---
+# Backend & AI Pipeline Rules
+
+## 1. Tech Stack & Standards
+- **Framework:** FastAPI (Async I/O).
+- **Task Queue:** Celery + Redis.
+- **LLM:** LangChain + OpenAI (GPT-4o).
+- **Database:** PostgreSQL (SQLAlchemy/Prisma), Pinecone.
+
+## 2. Python Coding Standards
+- **Typing:** Strict type hinting is REQUIRED (Python 3.10+ syntax). Use `pydantic` models for all I/O.
+- **Async:** Use `async def` for all I/O bound operations (DB, External APIs).
+- **Docstrings:** Google Style Python Docstrings for all services and complex logic.
+- **Project Structure:**
+  - `routers/`: API Endpoints
+  - `services/`: Business Logic (LLM Chains, Crawling)
+  - `models/`: DB Models & Pydantic Schemas
+  - `tasks/`: Celery Worker definitions
+
+## 3. AI & LLM Guidelines (Critical)
+- **Prompt Engineering:**
+  - Abstract prompts into template files/constants. NEVER hardcode prompts inside logic functions.
+  - **Dynamic Prompt Construction:** `SystemPrompt = BaseTemplate + ViewpointModifier + UserKeywords`.
+- **Crawling (Tavily/Exa):**
+  - Implement aggressive timeout handling.
+  - Use `try-except` blocks specific to network failures around the crawler.
+- **Map-Reduce Implementation:**
+  - **Map:** Summarize each URL individually first.
+  - **Reduce:** Combine summaries into the final report.
+  - Always cite sources in the [Reduce] step using `[Source: URL]` format.
+
+## 4. Error Handling & Logging
+- Use a structured logger (JSON format preferred for Prod).
+- **Partial Failures:** In the `Map` phase, if one URL fails, log it as warning, return `None`, and filter it out before the `Reduce` phase. DO NOT raise an exception that stops the worker.
+
+## 5. Example: Pydantic Model for Report
+```python
+class AnalysisReport(BaseModel):
+    summary: List[str] = Field(..., max_items=3, description="Executive summary, strictly 3 bullet points")
+    sources: List[SourceAnalysis]
+    action_items: str

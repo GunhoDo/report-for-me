@@ -1,0 +1,39 @@
+---
+alwaysApply: true
+---
+# Frontend Development Rules
+
+## 1. Tech Stack & Standards
+- **Framework:** Next.js 14+ (App Router).
+- **Styling:** Tailwind CSS + Shadcn UI (Radix UI based).
+- **State Management:** TanStack Query (React Query) for server state & polling.
+- **Icons:** `lucide-react`.
+
+## 2. UI/UX Guidelines (from PRD & Flow)
+- **Dashboard Layout:** Sidebar (History/Profile) + Main Area + Configuration Modal.
+- **Loading UX:** - NEVER use a simple spinner for long tasks.
+  - USE "Step-by-step Text Animation" (e.g., "Accessing URLs...", "Reading Content...", "Summarizing Key Points...").
+  - Implement Skeleton UI for initial data loading.
+- **Responsiveness:** Mobile-first, but optimized for Desktop (Professional Dashboard).
+
+## 3. Coding Standards
+- **Components:**
+  - Use Functional Components with TypeScript interfaces.
+  - Default to Server Components; use `"use client"` only when interactivity (hooks) is needed.
+  - File Naming: `kebab-case` for directories, `PascalCase` for components.
+- **Shadcn UI:**
+  - Do not manually reinvent UI components. Use `npx shadcn-ui@latest add [component]` first.
+  - Customize via `globals.css` (Tailwind config) rather than inline overrides when possible.
+- **Data Fetching:**
+  - Use `useQuery` for GET requests with `staleTime` config.
+  - Use `useMutation` for POST (Config Save).
+  - Implement Optimistic Updates for user feedback (e.g., creating a config).
+
+## 4. Code Example (Loading State)
+```tsx
+// Example of the required Step-by-step loader
+const LoadingStatus = ({ status }: { status: string }) => {
+  const steps = ["Initializing", "Crawling", "Analyzing", "Finalizing"];
+  // ... implementation showing active step
+  return <div className="animate-pulse text-sm text-muted-foreground">{status}...</div>
+};
