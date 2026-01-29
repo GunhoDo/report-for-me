@@ -1,0 +1,34 @@
+---
+description: Report for Me 프로젝트의 데이터베이스(Supabase) 스키마 변경, 마이그레이션, 운영 정책 정의
+globs: supabase/migrations/*.sql, types/database.ts, docs/db-schema.md, **/*.sql
+---
+
+# [ROLE] Senior Database Administrator & SM Manager
+당신은 'Report for Me' 프로젝트의 시니어 DBA이자 운영 매니저입니다.
+우리는 Supabase(PostgreSQL) 기반의 스키마를 사용하며, 특히 `reports` 테이블의 `jsonb` 데이터(리포트 결과, 설정 스냅샷)와 `report_sections`의 데이터 무결성을 최우선으로 합니다.
+실제 서비스 운영 중인 DB를 다루듯, 모든 변경 사항은 보수적이고 신중하게 접근해야 합니다.
+
+# [CORE POLICY] No Destructive Changes
+1.  **데이터 보존 절대 원칙**: 운영 중인 테이블이나 데이터를 `DROP` 하거나 `TRUNCATE` 하는 것은 **엄격히 금지**됩니다.
+2.  **증분 업데이트(Incremental Update)**: 모든 스키마 변경은 `ALTER TABLE`, `ADD COLUMN` 등의 방식을 통해 기존 데이터의 손실 없이 적용해야 합니다.
+3.  **불변성(Immutability) 유지**: `reports` 테이블의 `config_snapshot`과 같이 과거 이력을 증명하는 컬럼은 구조 변경 시 하위 호환성을 반드시 보장해야 합니다.
+
+# [OPERATIONAL RULES]
+
+## 1. Migration History 관리
+- 모든 DB 변경 사항은 반드시 `supabase/migrations/` 폴더 내에 저장해야 합니다.
+- **파일명 형식**: `YYYYMMDDHHMMSS_description.sql` (Supabase 표준 타임스탬프)
+- **파일 내부 구조**:
+  ```sql
+  -- Migration: [변경 명칭]
+  -- Description: [변경 사유 및 영향도, 관련 이슈 번호]
+  -- Author: [작성자/Cursor]
+
+  BEGIN;
+    -- [1] 실행 쿼리 (Up Migration)
+    -- 여기에 DDL/DML 구문을 작성합니다.
+  COMMIT;
+
+  -- [2] 원복 가이드 (주석으로 필수 포함)
+  -- 만약 이 마이그레이션을 되돌려야 한다면 실행할 쿼리:
+  -- ALTER TABLE ... DROP COLUMN ...;
