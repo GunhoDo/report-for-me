@@ -29,7 +29,7 @@ export function HomeClient() {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
                 <FileText className="h-4 w-4 text-primary-foreground" />
               </div>
-              <span className="text-lg font-semibold">RFM</span>
+              <span className="text-lg font-semibold">Report For Me</span>
             </div>
             <div className="hidden items-center gap-8 md:flex">
               <a
@@ -97,7 +97,7 @@ export function HomeClient() {
 
               {/* Subheadline */}
               <p className="mt-6 max-w-2xl text-lg text-muted-foreground md:text-xl">
-                Stop drowning in tabs. RFM reads, analyzes, and synthesizes
+                Stop drowning in tabs. Report For Me reads, analyzes, and synthesizes
                 information from multiple sources to deliver concise, actionable
                 insights.
               </p>
@@ -289,7 +289,7 @@ export function HomeClient() {
             </h2>
             <p className="mt-4 text-lg text-muted-foreground">
               Join thousands of researchers, analysts, and curious minds using
-              RFM.
+              Report For Me.
             </p>
             <Button
               size="lg"
@@ -310,7 +310,7 @@ export function HomeClient() {
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
                   <FileText className="h-4 w-4 text-primary-foreground" />
                 </div>
-                <span className="font-semibold">RFM</span>
+                <span className="font-semibold">Report For Me</span>
               </div>
               <p className="text-sm text-muted-foreground">
                 Report for Me. Your AI research assistant.

@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,27 +14,95 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FileText, ArrowLeft, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export default function SignupPage() {
   const router = useRouter();
+  const { toast } = useToast();
+  const supabase = useMemo(() => createClient(), []);
   const [showPassword, setShowPassword] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(true);
+  const [isSignUp] = useState(true); // signup 페이지는 항상 회원가입 모드
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  // signup 페이지는 기본이 SignUp 모드
-  useEffect(() => {
-    setIsSignUp(true);
-  }, []);
-
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate signup -> go to dashboard
-    router.push("/dashboard");
+    setIsLoading(true);
+
+    try {
+      // 회원가입
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        toast({
+          title: "회원가입 실패",
+          description: error.message,
+          variant: "destructive",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // 이메일 확인이 필요한 경우
+      if (data.user && !data.session) {
+        toast({
+          title: "이메일 확인 필요",
+          description: "이메일을 확인하여 계정을 활성화해주세요.",
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // 자동 로그인된 경우
+      if (data.session) {
+        router.push("/dashboard");
+        router.refresh();
+      }
+    } catch (error) {
+      toast({
+        title: "오류 발생",
+        description: error instanceof Error ? error.message : "알 수 없는 오류",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+    }
   };
 
-  const handleGoogleLogin = () => {
-    router.push("/dashboard");
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        toast({
+          title: "로그인 실패",
+          description: error.message,
+          variant: "destructive",
+        });
+        setIsLoading(false);
+      }
+      // 성공 시 자동으로 Google 인증 페이지로 리다이렉트됨
+    } catch (error) {
+      toast({
+        title: "오류 발생",
+        description: error instanceof Error ? error.message : "알 수 없는 오류",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -54,19 +122,15 @@ export default function SignupPage() {
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary">
             <FileText className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-2xl font-bold">RFM</span>
+          <span className="text-2xl font-bold">Report For Me</span>
         </div>
 
         {/* Signup Card (same component as tmp-v0 login-page) */}
         <Card className="w-full max-w-md border-border bg-card">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">
-              {isSignUp ? "Create your account" : "Welcome back"}
-            </CardTitle>
+            <CardTitle className="text-2xl">Create your account</CardTitle>
             <CardDescription className="text-muted-foreground">
-              {isSignUp
-                ? "Sign up to start your research journey"
-                : "Sign in to continue your research"}
+              Sign up to start your research journey
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -75,6 +139,7 @@ export default function SignupPage() {
               variant="outline"
               className="w-full border-border bg-transparent text-foreground hover:bg-secondary"
               onClick={handleGoogleLogin}
+              disabled={isLoading}
             >
               <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24">
                 <path
@@ -157,30 +222,22 @@ export default function SignupPage() {
               <Button
                 type="submit"
                 className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                disabled={isLoading}
               >
-                {isSignUp ? "Create Account" : "Sign In"}
+                {isLoading ? "처리 중..." : "Create Account"}
               </Button>
             </form>
 
             {/* Toggle Sign Up / Sign In */}
             <div className="text-center text-sm">
               <span className="text-muted-foreground">
-                {isSignUp
-                  ? "Already have an account? "
-                  : "Don't have an account? "}
+                Already have an account?{" "}
               </span>
               <button
-                onClick={() => {
-                  // signup 페이지에서 toggle하면 로그인으로 이동(UX 동일)
-                  if (isSignUp) {
-                    router.push("/login");
-                  } else {
-                    setIsSignUp(true);
-                  }
-                }}
+                onClick={() => router.push("/login")}
                 className="font-medium text-primary hover:underline"
               >
-                {isSignUp ? "Sign In" : "Sign Up"}
+                Sign In
               </button>
             </div>
           </CardContent>

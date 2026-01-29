@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -104,6 +105,7 @@ Focus on high-impact, low-risk use cases initially. Build internal capabilities 
 
 export function AppDashboard() {
   const router = useRouter();
+  const { signOut } = useAuth();
 
   // Report management state
   const [reports, setReports] = useState<Report[]>([
@@ -351,7 +353,7 @@ export function AppDashboard() {
                 <FileText className="h-4 w-4 text-primary-foreground" />
               </div>
               <span className="text-lg font-semibold text-sidebar-foreground">
-                RFM
+                Report For Me
               </span>
             </div>
             <button
@@ -542,7 +544,7 @@ export function AppDashboard() {
                     다른 계정 추가
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => router.push("/")}
+                    onClick={signOut}
                     className="gap-2 px-3"
                   >
                     <LogOut className="h-4 w-4" />
@@ -576,7 +578,7 @@ export function AppDashboard() {
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
               <FileText className="h-4 w-4 text-primary-foreground" />
             </div>
-            <span className="font-semibold">RFM</span>
+            <span className="font-semibold">Report For Me</span>
           </div>
           <div className="w-6" />
         </header>
