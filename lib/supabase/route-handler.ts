@@ -1,11 +1,11 @@
-import { cookies } from "next/headers";
 import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
 import type { Database } from "@/types/database";
 
 /**
- * 서버용 Supabase 클라이언트 (Server Components, Route Handlers).
- * Server Components와 Route Handlers에서 사용합니다.
- * 쿠키를 안전하게 관리합니다.
+ * Route Handler용 Supabase 클라이언트
+ * Route Handlers (app/api/.../route.ts)에서만 사용합니다.
+ * 쿠키 수정이 가능한 버전입니다.
  */
 export async function createClient() {
   if (
@@ -28,13 +28,10 @@ export async function createClient() {
           return cookieStore.getAll();
         },
         setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options);
-            });
-          } catch {
-            // Server Component에서 쿠키 설정은 무시 (읽기 전용)
-          }
+          // Route Handler에서는 쿠키 설정이 가능합니다
+          cookiesToSet.forEach(({ name, value, options }) => {
+            cookieStore.set(name, value, options);
+          });
         },
       },
     }

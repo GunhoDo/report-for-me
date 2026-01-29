@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,23 +14,118 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { FileText, ArrowLeft, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { toast } = useToast();
+  const supabase = useMemo(() => createClient(), []);
   const [showPassword, setShowPassword] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate login
-    router.push("/dashboard");
+    setIsLoading(true);
+
+    try {
+      if (isSignUp) {
+        // 회원가입
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback`,
+          },
+        });
+
+        if (error) {
+          toast({
+            title: "회원가입 실패",
+            description: error.message,
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        // 이메일 확인이 필요한 경우
+        if (data.user && !data.session) {
+          toast({
+            title: "이메일 확인 필요",
+            description: "이메일을 확인하여 계정을 활성화해주세요.",
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        // 자동 로그인된 경우
+        if (data.session) {
+          router.push("/dashboard");
+          router.refresh();
+        }
+      } else {
+        // 로그인
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (error) {
+          toast({
+            title: "로그인 실패",
+            description: error.message,
+            variant: "destructive",
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        if (data.session) {
+          router.push("/dashboard");
+          router.refresh();
+        }
+      }
+    } catch (error) {
+      toast({
+        title: "오류 발생",
+        description: error instanceof Error ? error.message : "알 수 없는 오류",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+    }
   };
 
-  const handleGoogleLogin = () => {
-    // Simulate Google login
-    router.push("/dashboard");
+  const handleGoogleLogin = async () => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+
+      if (error) {
+        toast({
+          title: "로그인 실패",
+          description: error.message,
+          variant: "destructive",
+        });
+        setIsLoading(false);
+      }
+      // 성공 시 자동으로 Google 인증 페이지로 리다이렉트됨
+    } catch (error) {
+      toast({
+        title: "오류 발생",
+        description: error instanceof Error ? error.message : "알 수 없는 오류",
+        variant: "destructive",
+      });
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -153,8 +248,13 @@ export default function LoginPage() {
               <Button
                 type="submit"
                 className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                disabled={isLoading}
               >
-                {isSignUp ? "Create Account" : "Sign In"}
+                {isLoading
+                  ? "처리 중..."
+                  : isSignUp
+                    ? "Create Account"
+                    : "Sign In"}
               </Button>
             </form>
 

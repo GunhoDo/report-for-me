@@ -1,8 +1,10 @@
+import { createBrowserClient } from "@supabase/ssr";
+import type { Database } from "@/types/database";
+
 /**
  * 브라우저용 Supabase 클라이언트.
- * 설치: pnpm add @supabase/supabase-js @supabase/ssr
- * 구현: createBrowserClient(URL, ANON_KEY) from "@supabase/ssr"
- * @see docs/tech-stack.md
+ * 클라이언트 컴포넌트에서만 사용 가능 ("use client").
+ * 쿠키를 자동으로 관리합니다.
  */
 export function createClient() {
   if (
@@ -13,6 +15,9 @@ export function createClient() {
       "Supabase not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY."
     );
   }
-  // TODO: import { createBrowserClient } from "@supabase/ssr"; 후 구현
-  return {} as unknown;
+
+  return createBrowserClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
 }
