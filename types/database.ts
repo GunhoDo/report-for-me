@@ -311,5 +311,18 @@ export interface Database {
       source_status_enum: SourceStatusEnum;
       section_status_enum: SectionStatusEnum;
     };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
   };
 }
+
+// ============================================================================
+// HELPER TYPES (Supabase gen types 호환)
+// ============================================================================
+
+export type Tables<T extends keyof Database["public"]["Tables"]> =
+  Database["public"]["Tables"][T]["Row"];
+
+export type Enums<T extends keyof Database["public"]["Enums"]> =
+  Database["public"]["Enums"][T];

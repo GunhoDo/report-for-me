@@ -31,25 +31,34 @@
 
 ## 3. User Flow (Technical Workflow)
 
+### 3.1 Report-Centric Data Model (핵심)
+* **Report:** 사용자가 생성하는 단위. 하나의 연구/분석 프로젝트.
+* **Per Report:** 최대 3개의 소스 슬롯 (Source A, B, C)
+  * 각 슬롯: URL, Keywords, Viewpoint (소스별로 독립 설정)
+  * 각 슬롯별 개별 페치 및 분석
+* **Integrated Synthesis (통합 제언):** 3개 소스 분석 결과를 Map-Reduce하여 도출하는 최종 인사이트.
+  * **사용 조건:** 3개 소스를 **모두** 등록·설정해야만 "Generate Integrated Perspective" 버튼이 활성화되고 실행 가능.
+  * 1~2개만 설정된 경우 통합 제언 기능은 비활성화.
+* **History:** 사용자는 여러 리포트를 보유하며, 사이드바에서 선택하여 조회.
+
 ### Phase 1: Configuration (User Action)
-1.  **Onboarding/Settings:** 사용자가 'Agent 설정' 페이지 진입.
-2.  **Source Registration:** 모니터링할 URL 입력 (Valid Check 필수).
-3.  **Parameter Mapping (UI Controls):**
-    * `Keywords`: 관심 키워드 입력 (예: "영업이익", "React 19 Breaking Changes").
-    * `Viewpoint`: 원하는 관점 입력 (예, 비판적 분석, 투자자 관점, 초보자 눈높이, Fact).
-4.  **Save:** 설정값 DB 저장 (`UserConfig` Table).
-    * *Note: 이때 프롬프트는 생성되지 않음, 설정값만 저장.*
+1.  **Report Creation:** 사용자가 새 리포트 생성 (또는 기존 리포트 선택).
+2.  **Per-Source Configuration:** 각 리포트당 최대 3개의 소스 슬롯 (Source A, B, C).
+    * 각 슬롯: URL 입력 (Valid Check 필수), Keywords, Viewpoint (소스별로 개별 설정).
+3.  **Save:** 설정값을 해당 리포트에 연결하여 저장.
+    * *Note: 이때 프롬프트는 생성되지 않음, 설정값만 저장. 리포트 단위로 설정이 관리됨.*
 
 ### Phase 2: Execution Pipeline (System Action)
-1.  **Trigger:** `Celery Beat`가 유저별 설정된 시간(Timezone)에 Task 발행.
-2.  **Robust Crawling (Parallel):** 등록된 URL들에 대해 동시 접속 (Async).
-    * **Fail-Safe:** 5개 중 1개 실패 시, 해당 URL은 `Status: Failed` 마킹 후 프로세스 계속 진행.
+1.  **Trigger:** 사용자가 "Generate Integrated Perspective" 클릭 시, 또는 `Celery Beat`가 리포트별 스케줄에 따라 Task 발행.
+    * *전제:* 3개 소스가 모두 등록·설정된 상태여야 실행 가능.
+2.  **Robust Crawling (Parallel):** 3개 URL에 대해 동시 접속 (Async).
+    * **Fail-Safe:** 3개 중 1개 실패 시, 해당 URL은 `Status: Failed` 마킹 후 프로세스 계속 진행.
 3.  **Dynamic Prompt Assembly (Backend):**
-    * DB의 설정값(Keyword, Viewpoint)을 불러와 Template에 주입.
+    * 각 소스별 설정값(Keyword, Viewpoint)을 불러와 Template에 주입.
     * `SystemPrompt = f"Analyze based on {Viewpoint}, focusing on {Keywords}..."`
 4.  **Map-Reduce Analysis:**
-    * **(Map)** 각 URL별로 개별 분석 수행.
-    * **(Reduce)** 개별 분석 결과를 모아 '통합 제언' 생성.
+    * **(Map)** 각 URL별로 해당 소스의 Keywords/Viewpoint로 개별 분석 수행.
+    * **(Reduce)** 3개 개별 분석 결과를 종합하여 '통합 제언(Integrated Synthesis)' 생성.
 
 ### Phase 3: Delivery & Interaction (UX)
 1.  **Progress Feedback (Real-time):** 사용자가 대시보드 접속 시, 처리 상태를 단계별로 노출 (WebSocket or Polling).
@@ -64,6 +73,8 @@
 ### F1. Config-Driven Prompt Engine (Core)
 * **Description:** 사용자의 UI 조작(클릭, 선택)을 LLM 명령어로 변환하는 로직.
 * **Requirements:**
+    * **리포트 단위 설정:** 각 리포트는 최대 3개의 소스 구성을 가짐.
+    * **소스별 설정:** 각 소스 슬롯은 URL, Keywords, Viewpoint를 독립적으로 가짐.
     * 관점(Viewpoint) 선택에 따른 System Prompt 템플릿이 백엔드에 하드코딩 되어 있어야 함.
     * 유저 입력 키워드(User Input)는 반드시 **Sanitization** 후 프롬프트에 주입 (Prompt Injection 방지).
 
@@ -79,6 +90,9 @@
     * **Executive Summary:** 3줄 이내 (Bullet points). *(Strict Constraint)*
     * **Source-wise Analysis:** 각 URL별 분석 (인용 출처 명시 필수).
     * **Action Item:** 사용자 관점에 따른 추천 행동.
+* **Integrated Synthesis (통합 제언):**
+    * 3개 소스 분석 결과를 Map-Reduce하여 최종 인사이트 도출.
+    * **사용 조건:** 3개 소스를 모두 등록·설정한 경우에만 실행 가능. 1~2개만 설정 시 UI에서 비활성화.
 
 ### F4. Asynchronous UX & Notification
 * **Description:** 긴 대기 시간(30~60초)을 사용자 경험으로 승화.
@@ -108,14 +122,18 @@
 * **Observability:** LangSmith (프롬프트 디버깅 및 비용 모니터링).
 
 ### 5.4 Database
-* **PostgreSQL (RDB):** 사용자 정보, 설정값(Config), 리포트 아카이빙.
+* **PostgreSQL (RDB):**
+  * **reports:** 리포트 메타데이터, 상태, 생성일.
+  * **report_sources / report_sections:** 리포트별 소스 구성 (report_id, slot_index, url, keywords, viewpoint, 분석 결과).
+  * **config_snapshot:** 리포트 생성 시점의 설정 스냅샷 (과거 이력 보존).
+  * *Note: "사용자당 1개 설정"이 아닌 "리포트당 1개 설정(3소스 구성)"으로 관리.*
 * **Pinecone (Vector DB):** 사용자 피드백 및 선호도 벡터 저장 (Long-term Memory).
 
 ---
 
 ## 6. Success Metrics (KPIs)
 
-* **Configuration Activation Rate:** 가입 유저 중 '첫 번째 설정'을 완료하고 리포트를 1회 이상 생성한 비율. (목표: 60% 이상)
+* **Report Activation Rate:** 가입 유저 중 '첫 번째 리포트'를 생성 완료한 비율 (최소 3개 소스 설정 + Generate 실행). (목표: 60% 이상)
 * **D+30 Retention:** 한 달 뒤에도 설정된 리포트를 열람하는지 여부.
 * **Pipeline Stability:** 리포트 생성 성공률 (Partial Failure 포함 99.9% 목표).
 * **Avg. Latency:** 리포트 요청부터 완료까지 걸리는 시간 (Target: < 45s).
@@ -125,6 +143,7 @@
 ## 7. Operational Constraints & Rules
 
 * **Prompt Abstraction:** 엔드 유저는 절대 'System Prompt'라는 단어나 날것의 프롬프트 텍스트를 보지 못하게 합니다. 모든 것은 '설정', '관점', '키워드'로 표현됩니다.
+* **Integrated Synthesis Gate:** 통합 제언(Integrated Synthesis) 실행은 3개 소스가 모두 등록·설정된 경우에만 허용. 1~2개만 설정 시 UI에서 "Generate Integrated Perspective" 버튼 비활성화.
 * **Graceful Degradation:**
     * 수집 실패 시: "수집 실패"라고 명시하고 해당 섹션은 비워두되, 전체 리포트는 발행되어야 합니다.
     * API 에러 시: 재시도(Retry) 로직은 최대 3회로 제한합니다 (Exponential Backoff).

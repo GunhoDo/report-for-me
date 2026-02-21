@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/supabase/auth";
+import type { ReportsInsert, Tables } from "@/types/database";
 
 export async function POST(request: NextRequest) {
   try {
@@ -21,14 +22,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const configRow = config as Tables<"user_configs">;
+
     // 소스 목록 조회
-    const { data: sources } = await supabase
+    const { data: sourcesData } = await supabase
       .from("sources")
       .select("*")
       .eq("user_id", user.id)
       .eq("status", "valid");
 
-    if (!sources || sources.length === 0) {
+    const sources = (sourcesData ?? []) as Tables<"sources">[];
+
+    if (sources.length === 0) {
       return NextResponse.json(
         { error: { code: "NO_SOURCES", message: "유효한 소스가 없습니다." } },
         { status: 400 }
@@ -37,13 +42,13 @@ export async function POST(request: NextRequest) {
 
     // 리포트 레코드 생성 (pending 상태)
     const configSnapshot = {
-      keywords: config.keywords,
-      viewpoint: config.viewpoint,
-      schedule_cron: config.schedule_cron || null,
+      keywords: configRow.keywords,
+      viewpoint: configRow.viewpoint,
+      schedule_cron: configRow.schedule_cron ?? undefined,
       sources: sources.map((s) => ({
         source_id: s.id,
         url: s.url,
-        status: s.status,
+        status: s.status as "valid" | "failed",
       })),
       metadata: {
         llm_model: process.env.LLM_PROVIDER || "gemini",
@@ -51,23 +56,27 @@ export async function POST(request: NextRequest) {
       },
     };
 
-    const { data: report, error: reportError } = await supabase
+    const insertPayload: ReportsInsert = {
+      user_id: user.id,
+      status: "pending",
+      config_snapshot: configSnapshot,
+      started_at: new Date().toISOString(),
+    };
+
+    const { data: reportData, error: reportError } = await supabase
       .from("reports")
-      .insert({
-        user_id: user.id,
-        status: "pending",
-        config_snapshot: configSnapshot,
-        started_at: new Date().toISOString(),
-      })
+      .insert(insertPayload as never)
       .select()
       .single();
 
-    if (reportError || !report) {
+    if (reportError || !reportData) {
       return NextResponse.json(
         { error: { code: "CREATE_FAILED", message: "리포트 생성 실패" } },
         { status: 500 }
       );
     }
+
+    const report = reportData as Tables<"reports">;
 
     // 백엔드 API 호출 (FastAPI /api/reports/generate)
     const backendUrl = process.env.BACKEND_API_URL || "http://localhost:8000";
@@ -89,10 +98,8 @@ export async function POST(request: NextRequest) {
         const errorData = await backendResponse.json().catch(() => ({}));
         
         // 리포트 상태를 failed로 업데이트
-        await supabase
-          .from("reports")
-          .update({ status: "failed" })
-          .eq("id", report.id);
+        // @ts-expect-error - Supabase SSR client 타입 추론 이슈
+        await supabase.from("reports").update({ status: "failed" }).eq("id", report.id);
 
         return NextResponse.json(
           { 
@@ -115,10 +122,8 @@ export async function POST(request: NextRequest) {
       });
     } catch (fetchError) {
       // 네트워크 에러 등
-      await supabase
-        .from("reports")
-        .update({ status: "failed" })
-        .eq("id", report.id);
+      // @ts-expect-error - Supabase SSR client 타입 추론 이슈
+      await supabase.from("reports").update({ status: "failed" }).eq("id", report.id);
 
       return NextResponse.json(
         { 

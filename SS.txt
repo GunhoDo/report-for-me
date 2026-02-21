@@ -1,0 +1,47 @@
+sequenceDiagram
+    actor User as 사용자 (User)
+    participant FE as Frontend (Next.js)
+    participant API as Backend API (FastAPI)
+    participant DB as Database (PostgreSQL)
+    participant Queue as Task Queue (Redis/Celery)
+    participant Crawler as Web Scraper (Tavily/Exa)
+    participant LLM as AI Engine (GPT-4o)
+
+    Note over User, FE: Phase 1: 설정 및 요청
+    User->>FE: 1. 대시보드 진입 & 'New Report' 클릭
+    FE->>User: 빈 리포트 뷰 표시
+    User->>FE: 2. 소스 모듈(Source A) 설정 클릭
+    FE->>User: 설정 모달(URL, Keyword, Viewpoint) 표시
+    User->>FE: 정보 입력 후 'Save & Generate' 클릭
+    FE->>API: POST /api/modules/analyze (Config 데이터)
+    
+    Note over API, Queue: Phase 2: 실행 파이프라인
+    API->>DB: 모듈 설정 저장 (Status: PENDING)
+    API->>Queue: 분석 작업(Task) 발행
+    API-->>FE: 202 Accepted (비동기 처리 시작)
+    FE->>User: "Generating..." 로딩 상태 표시
+    
+    Queue->>Crawler: 3. URL 크롤링 요청
+    Crawler-->>Queue: 웹페이지 텍스트 데이터 반환
+    
+    Queue->>LLM: 4. Dynamic Prompt 전송 (Viewpoint + Keyword)
+    LLM-->>Queue: 분석 요약문(Summary) 반환
+    
+    Queue->>DB: 분석 결과 업데이트 (Status: COMPLETED)
+    
+    loop Polling / WebSocket
+        FE->>API: 작업 상태 확인
+        API-->>FE: 완료 상태 및 요약 데이터 반환
+    end
+
+    FE->>User: 5. 개별 소스 분석 결과 표시 (카드 UI 업데이트)
+
+    Note over User, LLM: Phase 3: 통합 및 전달
+    User->>FE: 6. 'Generate Integrated Perspective' 클릭
+    FE->>API: POST /api/reports/synthesize
+    API->>DB: 리포트 내 완료된 모든 모듈 조회
+    API->>LLM: Map-Reduce (모듈 요약본들 -> 최종 통합)
+    LLM-->>API: 통합 인사이트(3줄 요약 + 제언)
+    API->>DB: 통합 결과 저장
+    API-->>FE: 통합 결과 반환
+    FE->>User: 7. 최종 리포트 렌더링
