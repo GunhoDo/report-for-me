@@ -1,8 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useAuth } from "@/hooks/use-auth";
+import { useConfig, type SourceInput } from "@/hooks/use-config";
+import { useReports } from "@/hooks/use-reports";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -66,14 +69,6 @@ interface ModuleConfig {
 
 type ModuleId = "source-a" | "source-b" | "source-c";
 
-interface Report {
-  id: string;
-  title: string;
-  createdAt: Date;
-  modules: Record<ModuleId, ModuleConfig>;
-  integratedResult: string | null;
-}
-
 const defaultModule: ModuleConfig = {
   url: "",
   keywords: "",
@@ -82,100 +77,37 @@ const defaultModule: ModuleConfig = {
   isConfigured: false,
 };
 
-const sampleSummaries = [
-  "The analysis reveals a strong focus on emerging AI technologies and their practical applications in enterprise settings. Key themes include automation of routine tasks, enhanced decision-making capabilities, and the growing importance of ethical AI frameworks. The source emphasizes scalability and integration challenges as primary concerns for organizations adopting these technologies.",
-  "From a market perspective, the content highlights significant investment trends in the AI sector, with particular emphasis on generative AI applications. Notable observations include shifting consumer expectations, competitive dynamics among major tech players, and the democratization of AI tools through accessible platforms and APIs.",
-  "The technical analysis points to breakthrough developments in model efficiency and specialized hardware. Key insights include advances in training methodologies, the emergence of domain-specific models, and ongoing research into interpretability and safety measures. Performance benchmarks show consistent improvements across multiple evaluation metrics.",
-];
-
-const integratedSummary = `Based on comprehensive analysis across all configured sources, several overarching themes emerge:
-
-**Convergent Insights:**
-• AI adoption is accelerating across industries, driven by improved accessibility and demonstrated ROI
-• Technical advances in model efficiency are removing previous barriers to implementation
-• Enterprise readiness requires addressing both technical integration and organizational change management
-
-**Key Takeaways:**
-1. Organizations should prioritize pilot programs with clear success metrics
-2. Investment in AI literacy across teams is becoming a competitive differentiator
-3. Ethical considerations and governance frameworks are no longer optional
-
-**Strategic Recommendations:**
-Focus on high-impact, low-risk use cases initially. Build internal capabilities while leveraging external expertise. Establish clear data governance policies before scaling AI initiatives.`;
-
 export function AppDashboard() {
   const router = useRouter();
   const { signOut } = useAuth();
+  const { toast } = useToast();
+  const { sources, save, isSaving, isLoading: configLoading } = useConfig();
+  const { data: reports = [], isLoading: reportsLoading } = useReports(50);
 
-  // Report management state
-  const [reports, setReports] = useState<Report[]>([
-    {
-      id: "report-1",
-      title: "AI Trends Analysis",
-      createdAt: new Date(2026, 0, 25),
-      modules: {
-        "source-a": {
-          url: "https://openai.com/blog",
-          keywords: "GPT, AI models",
-          viewpoint: "Technical",
-          summary: sampleSummaries[0],
-          isConfigured: true,
-        },
-        "source-b": {
-          url: "https://techcrunch.com/ai",
-          keywords: "AI startups",
-          viewpoint: "Market",
-          summary: sampleSummaries[1],
-          isConfigured: true,
-        },
-        "source-c": { ...defaultModule },
-      },
-      integratedResult: null,
-    },
-    {
-      id: "report-2",
-      title: "Market Research Q4",
-      createdAt: new Date(2026, 0, 20),
-      modules: {
-        "source-a": {
-          url: "https://bloomberg.com",
-          keywords: "Q4 earnings",
-          viewpoint: "Financial",
-          summary: sampleSummaries[0],
-          isConfigured: true,
-        },
-        "source-b": { ...defaultModule },
-        "source-c": { ...defaultModule },
-      },
-      integratedResult: null,
-    },
-    {
-      id: "report-3",
-      title: "Competitor Review",
-      createdAt: new Date(2026, 0, 15),
-      modules: {
-        "source-a": { ...defaultModule },
-        "source-b": { ...defaultModule },
-        "source-c": { ...defaultModule },
-      },
-      integratedResult: null,
-    },
-  ]);
-
-  const [currentReportId, setCurrentReportId] = useState<string | null>(null);
-
-  // Get current report or create empty state
-  const currentReport = currentReportId
-    ? reports.find((r) => r.id === currentReportId)
-    : null;
-
-  const [modules, setModules] = useState<Record<ModuleId, ModuleConfig>>(
-    currentReport?.modules || {
+  // Map sources to modules (sources[0]=A, sources[1]=B, sources[2]=C)
+  const modules = useMemo((): Record<ModuleId, ModuleConfig> => {
+    const slotOrder: ModuleId[] = ["source-a", "source-b", "source-c"];
+    const result = {
       "source-a": { ...defaultModule },
       "source-b": { ...defaultModule },
       "source-c": { ...defaultModule },
-    }
-  );
+    };
+    slotOrder.forEach((slot, i) => {
+      const src = sources[i];
+      if (src?.url) {
+        result[slot] = {
+          url: src.url,
+          keywords: Array.isArray(src.keywords)
+            ? src.keywords.join(", ")
+            : "",
+          viewpoint: src.viewpoint ?? "",
+          summary: null,
+          isConfigured: true,
+        };
+      }
+    });
+    return result;
+  }, [sources]);
 
   const [activeModal, setActiveModal] = useState<ModuleId | null>(null);
   const [modalForm, setModalForm] = useState({
@@ -184,9 +116,6 @@ export function AppDashboard() {
     viewpoint: "",
   });
   const [isGenerating, setIsGenerating] = useState(false);
-  const [integratedResult, setIntegratedResult] = useState<string | null>(
-    currentReport?.integratedResult || null
-  );
   const [isGeneratingIntegrated, setIsGeneratingIntegrated] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -212,55 +141,6 @@ export function AppDashboard() {
     (m) => m.isConfigured
   ).length;
 
-  // Create a new report
-  const createNewReport = () => {
-    const newReport: Report = {
-      id: `report-${Date.now()}`,
-      title: `New Report ${reports.length + 1}`,
-      createdAt: new Date(),
-      modules: {
-        "source-a": { ...defaultModule },
-        "source-b": { ...defaultModule },
-        "source-c": { ...defaultModule },
-      },
-      integratedResult: null,
-    };
-    setReports((prev) => [newReport, ...prev]);
-    setCurrentReportId(newReport.id);
-    setModules(newReport.modules);
-    setIntegratedResult(null);
-  };
-
-  // Select a report from history
-  const selectReport = (reportId: string) => {
-    const report = reports.find((r) => r.id === reportId);
-    if (report) {
-      setCurrentReportId(reportId);
-      setModules(report.modules);
-      setIntegratedResult(report.integratedResult);
-    }
-  };
-
-  // Update current report when modules change
-  const updateCurrentReport = (
-    newModules: Record<ModuleId, ModuleConfig>,
-    newIntegratedResult?: string | null
-  ) => {
-    if (currentReportId) {
-      setReports((prev) =>
-        prev.map((r) =>
-          r.id === currentReportId
-            ? {
-                ...r,
-                modules: newModules,
-                integratedResult: newIntegratedResult ?? r.integratedResult,
-              }
-            : r
-        )
-      );
-    }
-  };
-
   const openModal = (moduleId: ModuleId) => {
     const module = modules[moduleId];
     setModalForm({
@@ -271,44 +151,75 @@ export function AppDashboard() {
     setActiveModal(moduleId);
   };
 
-  const handleSaveAndGenerate = async () => {
+  const handleSaveConfig = async () => {
     if (!activeModal) return;
 
     setIsGenerating(true);
+    try {
+      const slotOrder: ModuleId[] = ["source-a", "source-b", "source-c"];
+      const slotIndex = slotOrder.indexOf(activeModal);
+      const sourcesPayload: SourceInput[] = slotOrder.map((slot, i) => {
+        const m = modules[slot];
+        const isEditing = i === slotIndex;
+        const url = isEditing ? modalForm.url.trim() : m.url;
+        const keywords = isEditing
+          ? modalForm.keywords
+              .split(",")
+              .map((s) => s.trim())
+              .filter(Boolean)
+          : (m.keywords ? m.keywords.split(",").map((s) => s.trim()).filter(Boolean) : []);
+        const viewpoint = isEditing ? modalForm.viewpoint : m.viewpoint;
+        const src = sources[i];
+        return {
+          id: src?.id,
+          url,
+          keywords,
+          viewpoint,
+        };
+      });
 
-    // Simulate AI generation
-    await new Promise((resolve) => setTimeout(resolve, 2000));
-
-    const moduleIndex = ["source-a", "source-b", "source-c"].indexOf(
-      activeModal
-    );
-
-    const newModules = {
-      ...modules,
-      [activeModal]: {
-        ...modalForm,
-        summary: sampleSummaries[moduleIndex],
-        isConfigured: true,
-      },
-    };
-
-    setModules(newModules);
-    updateCurrentReport(newModules);
-
-    setIsGenerating(false);
-    setActiveModal(null);
-    setModalForm({ url: "", keywords: "", viewpoint: "" });
+      await save({ sources: sourcesPayload });
+      toast({ title: "설정 저장 완료", description: "설정이 저장되었습니다." });
+      setActiveModal(null);
+      setModalForm({ url: "", keywords: "", viewpoint: "" });
+    } catch (err) {
+      toast({
+        title: "저장 실패",
+        description: err instanceof Error ? err.message : "알 수 없는 오류",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const handleGenerateIntegrated = async () => {
+    if (configuredCount !== 3) return;
+
     setIsGeneratingIntegrated(true);
+    try {
+      const res = await fetch("/api/reports/generate", { method: "POST" });
+      const json = await res.json();
 
-    // Simulate AI synthesis
-    await new Promise((resolve) => setTimeout(resolve, 3000));
+      if (!res.ok) {
+        throw new Error(json.error?.message ?? "리포트 생성 실패");
+      }
 
-    setIntegratedResult(integratedSummary);
-    updateCurrentReport(modules, integratedSummary);
-    setIsGeneratingIntegrated(false);
+      toast({
+        title: "리포트 생성 시작",
+        description: "리포트가 생성 중입니다. 잠시만 기다려주세요.",
+      });
+
+      router.push(`/dashboard/reports/${json.data.report_id}`);
+    } catch (err) {
+      toast({
+        title: "생성 실패",
+        description: err instanceof Error ? err.message : "알 수 없는 오류",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingIntegrated(false);
+    }
   };
 
   const moduleLabels: Record<
@@ -368,7 +279,7 @@ export function AppDashboard() {
           <div className="p-4">
             <Button
               className="w-full justify-start gap-2 bg-primary text-primary-foreground hover:bg-primary/90"
-              onClick={createNewReport}
+              onClick={() => router.push("/dashboard")}
             >
               <Plus className="h-4 w-4" />
               New Report
@@ -383,20 +294,28 @@ export function AppDashboard() {
               </span>
             </div>
             <nav className="space-y-1">
-              {reports.map((report) => (
-                <button
-                  key={report.id}
-                  onClick={() => selectReport(report.id)}
-                  className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors ${
-                    currentReportId === report.id
-                      ? "bg-sidebar-accent text-sidebar-foreground font-medium"
-                      : "text-sidebar-foreground hover:bg-sidebar-accent"
-                  }`}
-                >
-                  <History className="h-4 w-4 text-muted-foreground" />
-                  <span className="truncate">{report.title}</span>
-                </button>
-              ))}
+              {reportsLoading ? (
+                <div className="px-3 py-2 text-sm text-muted-foreground">
+                  로딩 중...
+                </div>
+              ) : (
+                reports.map((report) => (
+                  <button
+                    key={report.id}
+                    onClick={() => router.push(`/dashboard/reports/${report.id}`)}
+                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-sidebar-foreground transition-colors hover:bg-sidebar-accent"
+                  >
+                    <History className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <span className="truncate">
+                      리포트{" "}
+                      {new Date(report.created_at).toLocaleDateString("ko-KR", {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
+                  </button>
+                ))
+              )}
             </nav>
           </div>
 
@@ -588,38 +507,16 @@ export function AppDashboard() {
           {/* Page Header */}
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-foreground lg:text-3xl">
-              {currentReport ? currentReport.title : "Research Dashboard"}
+              Research Dashboard
             </h1>
-            <p className="mt-1 text-muted-foreground">
-              {currentReport
-                ? `Created on ${currentReport.createdAt.toLocaleDateString(
-                    "ko-KR",
-                    { year: "numeric", month: "long", day: "numeric" }
-                  )}`
-                : "Click 'New Report' to start a new research project."}
-            </p>
           </div>
 
-          {/* Empty State when no report selected */}
-          {!currentReportId ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-muted">
-                <FileText className="h-10 w-10 text-muted-foreground" />
-              </div>
-              <h2 className="mb-2 text-xl font-semibold text-foreground">
-                No Report Selected
-              </h2>
-              <p className="mb-6 max-w-md text-muted-foreground">
-                Create a new report to start researching, or select an existing
-                one from the history.
-              </p>
-              <Button onClick={createNewReport} className="gap-2">
-                <Plus className="h-4 w-4" />
-                Create New Report
-              </Button>
+          {/* 2x2 Grid Layout */}
+          {configLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
           ) : (
-            /* 2x2 Grid Layout */
             <div className="grid gap-4 lg:grid-cols-2 lg:gap-6">
               {/* Source Modules (1, 2, 3) */}
               {(["source-a", "source-b", "source-c"] as ModuleId[]).map(
@@ -655,8 +552,14 @@ export function AppDashboard() {
                               </p>
                               <p className="line-clamp-1 text-sm text-muted-foreground">
                                 <span className="font-medium">Keywords:</span>{" "}
-                                {module.keywords}
+                                {module.keywords || "-"}
                               </p>
+                              {module.viewpoint && (
+                                <p className="line-clamp-1 text-sm text-muted-foreground">
+                                  <span className="font-medium">Viewpoint:</span>{" "}
+                                  {module.viewpoint}
+                                </p>
+                              )}
                             </div>
                             <Button
                               size="sm"
@@ -671,14 +574,14 @@ export function AppDashboard() {
                             </Button>
                           </div>
                           <div className="rounded-lg border border-border bg-muted/50 p-4">
-                            <div className="mb-2 flex items-center gap-2">
+                            <div className="flex items-center gap-2">
                               <Check className="h-4 w-4 text-primary" />
                               <span className="text-sm font-medium text-foreground">
-                                Analysis Complete
+                                설정 완료
                               </span>
                             </div>
-                            <p className="line-clamp-4 text-sm text-muted-foreground">
-                              {module.summary}
+                            <p className="mt-2 text-xs text-muted-foreground">
+                              리포트 생성 시 분석됩니다.
                             </p>
                           </div>
                         </div>
@@ -713,67 +616,38 @@ export function AppDashboard() {
                   Integrated Synthesis
                 </div>
 
-                {integratedResult ? (
-                  /* Results State */
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Check className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-medium text-foreground">
-                          Synthesis Complete
-                        </span>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => setIntegratedResult(null)}
-                      >
-                        Reset
-                      </Button>
-                    </div>
-                    <div className="max-h-[300px] overflow-y-auto rounded-lg border border-border bg-muted/50 p-4">
-                      <div className="prose prose-sm whitespace-pre-line text-muted-foreground">
-                        {integratedResult}
-                      </div>
-                    </div>
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                  <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                    <Sparkles className="h-6 w-6 text-primary" />
                   </div>
-                ) : (
-                  /* Default State */
-                  <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                      <Sparkles className="h-6 w-6 text-primary" />
-                    </div>
-                    <p className="text-sm font-medium text-foreground">
-                      Integrated Perspective
-                    </p>
-                    <p className="mb-4 mt-1 text-xs text-muted-foreground">
-                      {configuredCount === 0
-                        ? "Configure at least one source to enable synthesis"
-                        : `${configuredCount} source${
-                            configuredCount > 1 ? "s" : ""
-                          } configured`}
-                    </p>
-                    <Button
-                      disabled={
-                        configuredCount === 0 || isGeneratingIntegrated
-                      }
-                      onClick={handleGenerateIntegrated}
-                      className="bg-primary text-primary-foreground hover:bg-primary/90"
-                    >
-                      {isGeneratingIntegrated ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Synthesizing...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="mr-2 h-4 w-4" />
-                          Generate Integrated Perspective
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                )}
+                  <p className="text-sm font-medium text-foreground">
+                    Integrated Perspective
+                  </p>
+                  <p className="mb-4 mt-1 text-xs text-muted-foreground">
+                    {configuredCount < 3
+                      ? "3개 소스를 모두 설정하면 통합 제언을 생성할 수 있습니다."
+                      : "3개 소스가 설정되었습니다."}
+                  </p>
+                  <Button
+                    disabled={
+                      configuredCount !== 3 || isGeneratingIntegrated
+                    }
+                    onClick={handleGenerateIntegrated}
+                    className="bg-primary text-primary-foreground hover:bg-primary/90"
+                  >
+                    {isGeneratingIntegrated ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        생성 중...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="mr-2 h-4 w-4" />
+                        Generate Integrated Perspective
+                      </>
+                    )}
+                  </Button>
+                </div>
               </div>
             </div>
           )}
@@ -904,19 +778,19 @@ export function AppDashboard() {
               Cancel
             </Button>
             <Button
-              onClick={handleSaveAndGenerate}
-              disabled={!modalForm.url || isGenerating}
+              onClick={handleSaveConfig}
+              disabled={!modalForm.url.trim() || isGenerating || isSaving}
               className="bg-primary text-primary-foreground hover:bg-primary/90"
             >
-              {isGenerating ? (
+              {isGenerating || isSaving ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
+                  저장 중...
                 </>
               ) : (
                 <>
-                  <Sparkles className="mr-2 h-4 w-4" />
-                  Save & Generate
+                  <Check className="mr-2 h-4 w-4" />
+                  저장
                 </>
               )}
             </Button>

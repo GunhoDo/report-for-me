@@ -24,12 +24,14 @@ export async function POST(request: NextRequest) {
 
     const configRow = config as Tables<"user_configs">;
 
-    // 소스 목록 조회
+    // 소스 목록 조회 (valid 또는 pending - URL 검증 미구현 시 pending 허용)
     const { data: sourcesData } = await supabase
       .from("sources")
       .select("*")
       .eq("user_id", user.id)
-      .eq("status", "valid");
+      .in("status", ["valid", "pending"])
+      .order("created_at", { ascending: true })
+      .limit(3);
 
     const sources = (sourcesData ?? []) as Tables<"sources">[];
 

@@ -12,22 +12,22 @@
 
 ### 현재 화면 상태
 - **메인 대시보드**: `AppDashboard` – 2x2 그리드(Source A/B/C + Integrated Synthesis), 설정 모달, 사이드바(History, New Report)
-- **데이터**: 현재 **모킹 데이터** 사용 중 (로컬 state, Supabase 미연동)
-- **라우트**: `/dashboard` (메인), `/dashboard/history`, `/dashboard/reports/[id]`, `/dashboard/settings` – history/reports 페이지는 placeholder
+- **데이터**: **실제 데이터 연동 완료** – useConfig, useReports로 Supabase 연동
+- **라우트**: `/dashboard` (메인), `/dashboard/history`, `/dashboard/reports/[id]`, `/dashboard/settings` – history/reports 페이지 구현 완료
 
 ### 단계별 진행 계획
 
 | 단계 | 작업 | 우선순위 | 비고 |
 |------|------|----------|------|
-| **1** | `use-config.ts` 실제 구현 | 높음 | 설정 저장/조회를 Supabase와 연동. 현재 스텁 상태 |
-| **2** | `use-reports.ts` 생성 | 높음 | 리포트 목록 TanStack Query 훅. History 사이드바/페이지에 필요 |
-| **3** | `use-report-progress.ts` 실제 구현 | 중간 | "수집 중 → 분석 중 → 도출 중" 폴링. PRD F4 |
-| **4** | `lib/utils/report.ts` 생성 | 중간 | executive_summary, action_item JSONB 파싱. ReportView에 필요 |
-| **5** | AppDashboard ↔ 데이터 훅 연결 | 높음 | 모킹 제거, useConfig/useReports로 교체. **화면 레이아웃 유지** |
-| **6** | 리포트 상세 페이지 (`/reports/[id]`) | 높음 | ReportView, ReportProgress 컴포넌트 바인딩 |
-| **7** | 리포트 생성 버튼 → API 호출 | 높음 | "Generate Integrated" → `/api/reports/generate` POST |
-| **8** | History 페이지 | 중간 | useReports 기반 리포트 목록 렌더링 |
-| **9** | 소스 URL 검증, 피드백 저장 | 낮음 | Phase 2.3, 2.10 |
+| **1** | `use-config.ts` 실제 구현 | 높음 | ✅ 완료 – 소스별 keywords/viewpoint 저장 |
+| **2** | `use-reports.ts` 생성 | 높음 | ✅ 완료 |
+| **3** | `use-report-progress.ts` 실제 구현 | 중간 | ✅ 완료 – 2초 폴링 |
+| **4** | `lib/utils/report.ts` 생성 | 중간 | ✅ 완료 |
+| **5** | AppDashboard ↔ 데이터 훅 연결 | 높음 | ✅ 완료 – 모킹 제거 |
+| **6** | 리포트 상세 페이지 (`/reports/[id]`) | 높음 | ✅ 완료 – ReportView, ReportProgress |
+| **7** | 리포트 생성 버튼 → API 호출 | 높음 | ✅ 완료 |
+| **8** | History 페이지 | 중간 | ✅ 완료 |
+| **9** | 소스 URL 검증, 피드백 저장 | 낮음 | Phase 2.3, 2.10 – 미구현 |
 
 ### 데이터 모델 정합성 참고
 - **PRD**: 사용자당 1개 설정(keywords, viewpoint) + N개 소스(URL)
@@ -36,11 +36,12 @@
 - **연동 방안**: 3개 모듈 = 3개 sources. **sources 테이블에 keywords, viewpoint 컬럼 추가** (20260222120000 마이그레이션). 소스별 독립 설정 가능.
 
 ### 즉시 진행 권장 순서
-1. **use-config.ts** 구현 → 설정 모달이 DB와 연동
-2. **use-reports.ts** 생성 → History 사이드바에 실제 리포트 목록 표시
-3. **AppDashboard 데이터 바인딩** → useConfig, useReports로 모킹 교체 (화면 유지)
-4. **리포트 생성 플로우** → 버튼 클릭 시 `/api/reports/generate` 호출 후 상세 페이지 이동
-5. **ReportView, ReportProgress** → 상세 페이지에서 실제 데이터 렌더링
+1. ~~**use-config.ts** 구현~~ ✅ 완료
+2. ~~**use-reports.ts** 생성~~ ✅ 완료
+3. ~~**AppDashboard 데이터 바인딩**~~ ✅ 완료
+4. ~~**리포트 생성 플로우**~~ ✅ 완료
+5. ~~**ReportView, ReportProgress**~~ ✅ 완료
+6. **다음 단계**: 소스 URL 검증(2.3), 피드백 저장(2.10), 에러 핸들링(3.6, 3.7)
 
 ---
 
@@ -60,13 +61,20 @@
 - [x] **app/api/reports/generate/route.ts** – 리포트 생성 Route Handler (백엔드 API 호출)
 - [x] **components/providers/query-provider.tsx** – TanStack Query Provider
 - [x] **app/layout.tsx** – QueryProvider 적용
+- [x] **hooks/use-config.ts** – Supabase 연동 (소스별 keywords/viewpoint)
+- [x] **hooks/use-reports.ts** – 리포트 목록 TanStack Query 훅
+- [x] **hooks/use-report-progress.ts** – 진행 상태 폴링 (2초 간격)
+- [x] **lib/utils/report.ts** – executive_summary, action_item JSONB 파싱
+- [x] **AppDashboard** – useConfig, useReports 데이터 바인딩 (모킹 제거)
+- [x] **리포트 상세 페이지** – ReportView, ReportProgress (`/dashboard/reports/[id]`)
+- [x] **History 페이지** – useReports 기반 목록 (`/dashboard/history`)
+- [x] **sources 스키마 확장** – keywords, viewpoint 컬럼 (20260222120000 마이그레이션)
 
-### ❌ 미구현 항목 (데이터 바인딩)
-- [ ] **hooks/use-config.ts** – 실제 Supabase 연동 (현재 스텁)
-- [ ] **hooks/use-reports.ts** – 리포트 목록 클라이언트 훅 (미생성)
-- [ ] **hooks/use-report-progress.ts** – 진행 상태 폴링 (현재 스텁)
-- [ ] **lib/utils/report.ts** – JSONB 파싱 유틸리티 (미생성)
-- [ ] 설정/리포트 UI와 데이터 훅 바인딩
+### ❌ 미구현 항목
+- [ ] **소스 URL 검증** (Phase 2.3) – sources.status 업데이트
+- [ ] **리포트 피드백 저장** (Phase 2.10) – use-report-feedback.ts
+- [ ] **에러 핸들링 유틸리티** (Phase 3.6)
+- [ ] **글로벌 에러 바운더리** (Phase 3.7)
 
 ---
 
@@ -1500,7 +1508,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 - [x] 1.4: 인증 상태 관리 훅 (클라이언트)
 - [ ] 1.5: 프로필 데이터 페칭 (서버)
 - [ ] 1.6: 프로필 데이터 페칭 (클라이언트 훅)
-- [ ] 1.7: 타입 변환 유틸리티
+- [x] 1.7: 타입 변환 유틸리티 – `lib/utils/report.ts`
 
 **추가 구현 완료**:
 - [x] Route Handler용 Supabase 클라이언트 (`lib/supabase/route-handler.ts`)
@@ -1509,27 +1517,27 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 ### Phase 2: Core Logic (10개)
 - [x] 2.1: 사용자 설정 데이터 페칭 (서버) – `lib/data/config.ts`
-- [ ] 2.2: 사용자 설정 데이터 페칭 (클라이언트 훅) – `use-config.ts` 스텁 상태
+- [x] 2.2: 사용자 설정 데이터 페칭 (클라이언트 훅) – `use-config.ts`
 - [ ] 2.3: 소스 URL 검증 및 상태 업데이트
 - [x] 2.4: 리포트 목록 페칭 (서버) – `lib/data/reports.ts`
-- [ ] 2.5: 리포트 목록 페칭 (클라이언트 훅) – `use-reports.ts` 미생성
+- [x] 2.5: 리포트 목록 페칭 (클라이언트 훅) – `use-reports.ts`
 - [x] 2.6: 리포트 상세 페칭 (서버) – `lib/data/reports.ts`
 - [x] 2.7: 리포트 상세 페칭 (클라이언트 훅) – `hooks/use-report.ts`
-- [ ] 2.8: 리포트 진행 상태 폴링 (클라이언트) – `use-report-progress.ts` 스텁
+- [x] 2.8: 리포트 진행 상태 폴링 (클라이언트) – `use-report-progress.ts`
 - [x] 2.9: 리포트 생성 트리거 (Route Handler) – `app/api/reports/generate/route.ts`
 - [ ] 2.10: 리포트 피드백 저장 (Mutation)
 
 ### Phase 3: Interaction & Feedback (8개)
-- [ ] 3.1: 설정 저장 UI 바인딩
-- [ ] 3.2: 리포트 목록 UI 바인딩
-- [ ] 3.3: 리포트 상세 UI 바인딩
-- [ ] 3.4: 리포트 진행 상태 UI 바인딩
-- [ ] 3.5: 리포트 생성 트리거 UI 바인딩
+- [x] 3.1: 설정 저장 UI 바인딩 – AppDashboard Config Modal
+- [x] 3.2: 리포트 목록 UI 바인딩 – History 사이드바/페이지
+- [x] 3.3: 리포트 상세 UI 바인딩 – ReportView
+- [x] 3.4: 리포트 진행 상태 UI 바인딩 – ReportProgress
+- [x] 3.5: 리포트 생성 트리거 UI 바인딩 – Generate Integrated 버튼
 - [ ] 3.6: 에러 핸들링 유틸리티
 - [ ] 3.7: 글로벌 에러 바운더리
 - [x] 3.8: TanStack Query Provider 설정 – `app/layout.tsx` 적용 완료
 
-**총 25개 작업 항목** (완료: 10개)
+**총 25개 작업 항목** (완료: 21개)
 
 ---
 
@@ -2075,58 +2083,56 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 ## 📊 진행 상황 추적
 
-### Phase 1 진행률: 4/7 (57%)
+### Phase 1 진행률: 5/7 (71%)
 - [x] 1.1: Supabase 브라우저 클라이언트
 - [x] 1.2: Supabase 서버 클라이언트
 - [x] 1.3: 인증 상태 페칭 (서버)
 - [x] 1.4: 인증 상태 관리 훅 (클라이언트)
 - [ ] 1.5: 프로필 데이터 페칭 (서버)
 - [ ] 1.6: 프로필 데이터 페칭 (클라이언트 훅)
-- [ ] 1.7: 타입 변환 유틸리티
+- [x] 1.7: 타입 변환 유틸리티 – lib/utils/report.ts
 
-### Phase 2 진행률: 5/10 (50%)
+### Phase 2 진행률: 8/10 (80%)
 - [x] 2.1: 사용자 설정 데이터 페칭 (서버)
-- [ ] 2.2: 사용자 설정 데이터 페칭 (클라이언트 훅)
+- [x] 2.2: 사용자 설정 데이터 페칭 (클라이언트 훅) – use-config.ts
 - [ ] 2.3: 소스 URL 검증 및 상태 업데이트
 - [x] 2.4: 리포트 목록 페칭 (서버)
-- [ ] 2.5: 리포트 목록 페칭 (클라이언트 훅)
+- [x] 2.5: 리포트 목록 페칭 (클라이언트 훅) – use-reports.ts
 - [x] 2.6: 리포트 상세 페칭 (서버)
 - [x] 2.7: 리포트 상세 페칭 (클라이언트 훅)
-- [ ] 2.8: 리포트 진행 상태 폴링 (클라이언트)
+- [x] 2.8: 리포트 진행 상태 폴링 (클라이언트) – use-report-progress.ts
 - [x] 2.9: 리포트 생성 트리거 (Route Handler)
 - [ ] 2.10: 리포트 피드백 저장 (Mutation)
 
-### Phase 3 진행률: 1/8 (13%)
-- [ ] 3.1
-- [ ] 3.2
-- [ ] 3.3
-- [ ] 3.4
-- [ ] 3.5
-- [ ] 3.6
-- [ ] 3.7
+### Phase 3 진행률: 6/8 (75%)
+- [x] 3.1: 설정 저장 UI 바인딩
+- [x] 3.2: 리포트 목록 UI 바인딩
+- [x] 3.3: 리포트 상세 UI 바인딩
+- [x] 3.4: 리포트 진행 상태 UI 바인딩
+- [x] 3.5: 리포트 생성 트리거 UI 바인딩
+- [ ] 3.6: 에러 핸들링 유틸리티
+- [ ] 3.7: 글로벌 에러 바운더리
 - [x] 3.8: TanStack Query Provider 설정
 
-**전체 진행률: 10/25 (40%)**
+**전체 진행률: 21/25 (84%)**
 
-**추가 완료 항목**:
-- Route Handler용 Supabase 클라이언트
-- Google OAuth 로그인 및 로그아웃
-- OAuth 콜백 핸들러
-- lib/data/config.ts, lib/data/reports.ts
-- hooks/use-report.ts
-- app/api/reports/generate/route.ts
-- QueryProvider 및 layout 적용
+**추가 완료 항목** (2026-02-22 목업→실데이터 연동):
+- use-config.ts, use-reports.ts, use-report-progress.ts 실제 구현
+- lib/utils/report.ts (JSONB 파싱)
+- AppDashboard useConfig/useReports 바인딩, 모킹 제거
+- 리포트 상세 페이지 (ReportView, ReportProgress)
+- History 페이지 (history-list.tsx)
+- sources 스키마 확장 (keywords, viewpoint)
 
 ---
 
 **마지막 업데이트**: 2026-02-22  
-**다음 리뷰**: 각 Phase 완료 시점
+**다음 리뷰**: Phase 2.3, 2.10, 3.6, 3.7
 
 **최근 업데이트 내용** (2026-02-22):
-- ✅ Phase 2.1, 2.4, 2.6, 2.7, 2.9 완료 (설정/리포트 서버 페칭, use-report 훅, 리포트 생성 Route Handler)
-- ✅ Phase 3.8 완료 (TanStack Query Provider)
-- ✅ lib/data/config.ts, lib/data/reports.ts 구현 완료
-- ✅ app/api/reports/generate/route.ts 백엔드 연동 및 config_snapshot 처리 완료
+- ✅ 목업 → 실제 데이터 연동 완료 (use-config, use-reports, use-report-progress, lib/utils/report)
+- ✅ AppDashboard, 리포트 상세, History 페이지 데이터 바인딩
+- ✅ sources 테이블 keywords, viewpoint 컬럼 추가 (마이그레이션 20260222120000)
 
 ---
 
