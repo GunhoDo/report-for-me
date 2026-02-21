@@ -1,7 +1,7 @@
 """LLM provider abstraction layer for Gemini and OpenAI."""
 from abc import ABC, abstractmethod
 from typing import List, AsyncIterator
-from langchain.schema import BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 from langchain_google_genai import ChatGoogleGenerativeAI
 from app.config import settings

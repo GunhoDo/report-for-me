@@ -86,23 +86,22 @@ class CrawlerService:
         """
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
-            response = await client.get(url, follow_redirects=True)
-            
+                response = await client.get(url, follow_redirects=True)
+
             # HTML 파싱하여 텍스트만 추출
-            soup = BeautifulSoup(response.text, 'html.parser')
-            # script, style 태그 제거
+            soup = BeautifulSoup(response.text, "html.parser")
             for script in soup(["script", "style"]):
                 script.decompose()
-            
-            text = soup.get_text(separator=' ', strip=True)
-            content = text[:5000] # 길이 제한
-            
+
+            text = soup.get_text(separator=" ", strip=True)
+            content = text[:5000]
+
             return {
                 "url": url,
                 "content": content,
-                    "title": "",
-                    "status": "success",
-                }
+                "title": "",
+                "status": "success",
+            }
         except Exception as e:
             logger.warning(f"Fallback crawl failed for {url}: {e}")
             return {

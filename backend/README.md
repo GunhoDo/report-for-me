@@ -10,20 +10,34 @@ FastAPI + Celery + LangChain 기반 리포트 생성 백엔드 서버.
 - **Database**: Supabase (PostgreSQL)
 - **Crawler**: Tavily API
 
+## 사전 요구사항
+
+- [uv](https://docs.astral.sh/uv/) (Python 패키지 매니저)
+- Redis
+- Python 3.10+
+
+### uv 설치
+
+```bash
+# Windows (PowerShell)
+irm https://astral.sh/uv/install.ps1 | iex
+
+# macOS/Linux
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
 ## 설치
 
 ```bash
-# Python 가상환경 생성 (권장)
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+cd backend
 
-# 의존성 설치
-pip install -r requirements.txt
+# 의존성 동기화 (가상환경 생성 + 패키지 설치)
+uv sync
 ```
 
 ## 환경 변수 설정
 
-`.env.local` 파일에 다음 환경 변수를 설정하세요:
+프로젝트 루트의 `.env.local` 파일에 다음 환경 변수를 설정하세요:
 
 ```bash
 # Supabase
@@ -69,27 +83,40 @@ redis-server
 ### 2. FastAPI 서버 시작
 
 ```bash
+cd backend
+
 # 개발 모드
-uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 # 프로덕션 모드
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
+uv run uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
 ```
 
 ### 3. Celery Worker 시작
 
 ```bash
-# 개발 모드
-celery -A celery_app worker --loglevel=info
+cd backend
+
+# 개발 모드 (Linux/macOS)
+uv run celery -A celery_app worker --loglevel=info
+
+# Windows (--pool=solo 필수)
+uv run celery -A celery_app worker --loglevel=info --pool=solo
 
 # 프로덕션 모드
-celery -A celery_app worker --loglevel=info --concurrency=4
+uv run celery -A celery_app worker --loglevel=info --concurrency=4
 ```
 
-### 4. Celery Beat 시작 (스케줄러, 선택사항)
+### 4. 한 번에 실행
 
 ```bash
-celery -A celery_app beat --loglevel=info
+cd backend
+
+# Linux/macOS
+./run.sh
+
+# Windows
+run.bat
 ```
 
 ## API 엔드포인트
@@ -130,21 +157,11 @@ celery -A celery_app beat --loglevel=info
 
 리포트 생성 상태 조회
 
-**Response:**
-```json
-{
-  "report_id": "uuid",
-  "status": "completed",
-  "progress": {}
-}
-```
-
 ## 프로젝트 구조
 
 ```
 backend/
 ├── app/
-│   ├── __init__.py
 │   ├── main.py              # FastAPI 앱 진입점
 │   ├── config.py            # 환경 변수 설정
 │   ├── routers/
@@ -165,11 +182,23 @@ backend/
 │   ├── map_base.txt         # Map Phase 프롬프트 템플릿
 │   └── reduce_base.txt      # Reduce Phase 프롬프트 템플릿
 ├── celery_app.py            # Celery 앱 설정
-├── requirements.txt         # Python 의존성
+├── pyproject.toml           # uv 의존성 정의
 └── README.md
 ```
 
 ## 개발 가이드
+
+### 의존성 추가
+
+```bash
+uv add <package-name>
+```
+
+### 개발 의존성 추가
+
+```bash
+uv add --dev pytest pytest-asyncio
+```
 
 ### LLM Provider 변경
 
@@ -177,25 +206,11 @@ backend/
 - `gemini`: Google Gemini 사용 (기본값)
 - `openai`: OpenAI GPT-4o 사용
 
-### 프롬프트 템플릿 수정
-
-`backend/templates/` 디렉토리의 템플릿 파일을 수정하거나,
-`app/utils/prompts.py`의 `VIEWPOINT_MODIFIERS`를 수정하세요.
-
-### 리포트 생성 프로세스
-
-1. **Crawling**: Tavily API로 소스 URL 크롤링 (병렬)
-2. **Map Phase**: 각 소스별 개별 분석 (Gemini/OpenAI)
-3. **Reduce Phase**: 통합 분석 및 Executive Summary 생성
-4. **Action Item**: 행동 제안 생성
-5. **DB 저장**: Supabase에 결과 저장
-
 ## 문제 해결
 
 ### Redis 연결 오류
 
 ```bash
-# Redis가 실행 중인지 확인
 redis-cli ping  # 응답: PONG
 ```
 
@@ -203,13 +218,15 @@ redis-cli ping  # 응답: PONG
 
 1. Celery Worker가 실행 중인지 확인
 2. Redis 연결 확인
-3. 로그 확인: `celery -A celery_app worker --loglevel=debug`
+3. Windows: `--pool=solo` 옵션 사용 확인
+4. 로그 확인: `uv run celery -A celery_app worker --loglevel=debug`
 
-### Gemini API 오류
+### uv sync 실패
 
-1. `GOOGLE_GENERATIVE_AI_API_KEY` 환경 변수 확인
-2. API 키 유효성 확인
-3. Fallback으로 OpenAI 자동 전환됨
+```bash
+# uv 재설치 후
+uv sync
+```
 
 ## 라이선스
 

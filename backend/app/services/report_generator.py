@@ -1,6 +1,6 @@
 """Report generator service using Map-Reduce pattern."""
 from typing import List, Dict, Any
-from langchain.schema import SystemMessage, HumanMessage
+from langchain_core.messages import SystemMessage, HumanMessage
 from app.services.llm.provider import LLMStrategy
 from app.services.crawler import CrawlerService
 from app.utils.prompts import (
