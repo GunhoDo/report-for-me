@@ -37,6 +37,8 @@ export interface ConfigSnapshotSource {
   source_id: string | null;
   url: string;
   status: "valid" | "failed";
+  keywords?: string[];
+  viewpoint?: string;
   crawled_at?: string; // ISO 8601 timestamp
 }
 
@@ -120,6 +122,8 @@ export interface SourcesRow {
   user_id: string;
   url: string;
   status: SourceStatusEnum;
+  keywords: string[];
+  viewpoint: string;
   last_checked_at: string | null;
   last_crawled_at: string | null;
   created_at: string;
@@ -131,6 +135,8 @@ export interface SourcesInsert {
   user_id: string;
   url: string;
   status?: SourceStatusEnum;
+  keywords?: string[];
+  viewpoint?: string;
   last_checked_at?: string | null;
   last_crawled_at?: string | null;
   created_at?: string;
@@ -142,6 +148,8 @@ export interface SourcesUpdate {
   user_id?: string;
   url?: string;
   status?: SourceStatusEnum;
+  keywords?: string[];
+  viewpoint?: string;
   last_checked_at?: string | null;
   last_crawled_at?: string | null;
   created_at?: string;

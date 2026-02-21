@@ -32,7 +32,8 @@
 ### 데이터 모델 정합성 참고
 - **PRD**: 사용자당 1개 설정(keywords, viewpoint) + N개 소스(URL)
 - **현재 UI**: 3개 모듈 각각 url, keywords, viewpoint
-- **연동 방안**: 3개 모듈 = 3개 sources. keywords/viewpoint는 `user_configs`에서 1세트로 관리하고, UI에서는 동일하게 표시하거나 첫 모듈 값 사용. (추후 per-source 키워드가 필요하면 스키마 확장 검토)
+- **Keywords, Viewpoint**: 둘 다 **사용자 입력**이며, 미리 정해진 옵션이 아님. UI에서 Input/Textarea로 자유 입력받음.
+- **연동 방안**: 3개 모듈 = 3개 sources. **sources 테이블에 keywords, viewpoint 컬럼 추가** (20260222120000 마이그레이션). 소스별 독립 설정 가능.
 
 ### 즉시 진행 권장 순서
 1. **use-config.ts** 구현 → 설정 모달이 DB와 연동
@@ -1026,7 +1027,7 @@ export function ConfigModal() {
   const { config, sources, save, isSaving } = useConfig();
   const { toast } = useToast();
   const [keywords, setKeywords] = useState<string[]>(config?.keywords || []);
-  const [viewpoint, setViewpoint] = useState<string>(config?.viewpoint || "investor");
+  const [viewpoint, setViewpoint] = useState<string>(config?.viewpoint || ""); // 사용자 입력, 미리 정해진 기본값 없음
 
   const handleSave = async () => {
     try {

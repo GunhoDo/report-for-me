@@ -7,7 +7,7 @@
 
 ### 1.2 Solution Strategy (What & How)
 **"User-Configured Automated Intelligence"**
-사용자가 복잡한 프롬프트 엔지니어링을 할 필요 없이, **설정 페이지(Configuration)**에서 관심사 키워드와 관점만 선택하면, 시스템이 이를 해석하여 **Dynamic Prompt**를 생성하고 리포트를 배달하는 SaaS입니다.
+사용자가 복잡한 프롬프트 엔지니어링을 할 필요 없이, **설정 페이지(Configuration)**에서 관심사 키워드와 관점을 입력하면, 시스템이 이를 해석하여 **Dynamic Prompt**를 생성하고 리포트를 배달하는 SaaS입니다.
 
 * **Abstraction:** 프롬프트의 복잡성을 UI 레벨에서 완벽히 추상화합니다.
 * **Automation:** 스케줄러 기반의 RAG(Retrieval-Augmented Generation) 파이프라인을 구축합니다.
@@ -71,12 +71,11 @@
 ## 4. Key Features & Functional Specs
 
 ### F1. Config-Driven Prompt Engine (Core)
-* **Description:** 사용자의 UI 조작(클릭, 선택)을 LLM 명령어로 변환하는 로직.
+* **Description:** 사용자의 UI 조작(클릭, 입력)을 LLM 명령어로 변환하는 로직.
 * **Requirements:**
     * **리포트 단위 설정:** 각 리포트는 최대 3개의 소스 구성을 가짐.
-    * **소스별 설정:** 각 소스 슬롯은 URL, Keywords, Viewpoint를 독립적으로 가짐.
-    * 관점(Viewpoint) 선택에 따른 System Prompt 템플릿이 백엔드에 하드코딩 되어 있어야 함.
-    * 유저 입력 키워드(User Input)는 반드시 **Sanitization** 후 프롬프트에 주입 (Prompt Injection 방지).
+    * **소스별 설정:** 각 소스 슬롯은 URL, Keywords, Viewpoint를 독립적으로 가짐. **Keywords와 Viewpoint는 모두 사용자 입력**이며, 미리 정해진 옵션이 아님.
+    * 유저 입력(Keywords, Viewpoint)은 반드시 **Sanitization** 후 프롬프트에 주입 (Prompt Injection 방지).
 
 ### F2. Robust Multi-Source Collector
 * **Description:** 다양한 웹 환경(SPA, Anti-Scraping)에 대응하는 수집기.

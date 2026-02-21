@@ -49,6 +49,8 @@ export async function POST(request: NextRequest) {
         source_id: s.id,
         url: s.url,
         status: s.status as "valid" | "failed",
+        keywords: s.keywords ?? [],
+        viewpoint: s.viewpoint ?? "",
       })),
       metadata: {
         llm_model: process.env.LLM_PROVIDER || "gemini",
